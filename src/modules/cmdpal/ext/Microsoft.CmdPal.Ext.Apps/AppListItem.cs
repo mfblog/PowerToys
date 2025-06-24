@@ -4,7 +4,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.CmdPal.Ext.Apps.Helpers;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using Windows.Storage.Streams;
@@ -80,6 +82,32 @@ internal sealed partial class AppListItem : ListItem
             }
         }
 
+        if (!string.IsNullOrEmpty(_app.UserModelId))
+        {
+            var appDocLists = (IApplicationDocumentLists)new ApplicationDocumentLists();
+            appDocLists.SetAppID(_app.UserModelId);
+
+            appDocLists.GetList(APPDOCLISTTYPE.ADLT_RECENT, 5, out var recentDocs);
+
+            // recentDocs.Next(1, out var obj, out _);
+            // metadata.Add(new DetailsElement()
+            // {
+            //    Key = "Recent Documents",
+            //    Data = new DetailsLink() { Text = obj.ToString() ?? string.Empty },
+            // });
+        }
+
+        // recentDocs.GetCount(out var count);
+        // for (uint i = 0; i < count; i++)
+        // {
+        //    Guid guid = typeof(object).GUID;
+        //    recentDocs.GetAt(i, ref guid, out var doc);
+        //    metadata.Add(new DetailsElement()
+        //    {
+        //        Key = "Recent Document",
+        //        Data = new DetailsLink() { Text = doc?.ToString() ?? string.Empty },
+        //    });
+        // }
         return new Details()
         {
             Title = this.Title,
