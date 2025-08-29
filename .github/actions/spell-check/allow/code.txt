@@ -29,11 +29,14 @@ RUS
 AYUV
 bak
 Bcl
+bgcode
+Deflatealgorithm
 exa
 exabyte
 Gbits
 Gbps
 gcode
+Heatshrink
 Mbits
 MBs
 mkv
@@ -53,6 +56,8 @@ YVU
 YVYU
 zipfolder
 CODEOWNERS
+VNext
+vnext
 
 # FONTS
 
@@ -95,13 +100,25 @@ svgl
 
 altdown
 BUTTONUP
+bafunctions
+Baf
+Bitness
+BUILDARCHSHORT
 CTRLALTDEL
 Ctrls
+CSilent
+CBal
+CREATEBAFUNCTIONS
+CPrereq
+dirutil
+DUtil
+Editbox
 EXSEL
 HOLDENTER
 HOLDESC
 HOLDSPACE
 HOLDBACKSPACE
+IDIGNORE
 KBDLLHOOKSTRUCT
 keyevent
 LAlt
@@ -113,12 +130,16 @@ LCONTROL
 LCtrl
 LEFTDOWN
 LEFTUP
+locutil
+logutil
+msimg
 MBUTTON
 MBUTTONDBLCLK
 MBUTTONDOWN
 MBUTTONUP
 MIDDLEDOWN
 MIDDLEUP
+memutil
 NCRBUTTONDBLCLK
 NCRBUTTONDOWN
 NCRBUTTONUP
@@ -131,8 +152,18 @@ RCONTROL
 RCtrl
 RIGHTDOWN
 RIGHTUP
+Richedit
+rgwz
+resrutil
+srd
+scz
+shelutil
+thmutil
+uriutil
 VKTAB
+wcautil
 winkey
+wininet
 WMKEYDOWN
 WMKEYUP
 WMSYSKEYDOWN
@@ -142,6 +173,7 @@ XBUTTONDBLCLK
 XBUTTONDOWN
 XBUTTONUP
 XDOWN
+xmlutil
 
 # Prefix
 pcs
@@ -279,3 +311,12 @@ xef
 xes
 PACKAGEVERSIONNUMBER
 APPXMANIFESTVERSION
+
+# MRU lists
+CACHEWRITE
+MRUCMPPROC
+MRUINFO
+REGSTR
+
+# Misc Win32 APIs and PInvokes
+INVOKEIDLIST
