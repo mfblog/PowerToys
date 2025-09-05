@@ -5,23 +5,20 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.IO.Abstractions;
 using System.Linq;
-using System.Reflection;
 using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using ManagedCommon;
 using Microsoft.CmdPal.Ext.Apps.Commands;
 using Microsoft.CmdPal.Ext.Apps.Properties;
 using Microsoft.CmdPal.Ext.Apps.Utils;
+using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using Microsoft.Win32;
+using Windows.System;
 
 namespace Microsoft.CmdPal.Ext.Apps.Programs;
 
@@ -173,7 +170,7 @@ public class Win32Program : IProgram
 
     public bool QueryEqualsNameForRunCommands(string query)
     {
-        if (query != null && AppType == ApplicationType.RunCommand)
+        if (query is not null && AppType == ApplicationType.RunCommand)
         {
             // Using OrdinalIgnoreCase since this is used internally
             if (!query.Equals(Name, StringComparison.OrdinalIgnoreCase) && !query.Equals(ExecutableName, StringComparison.OrdinalIgnoreCase))
@@ -185,27 +182,52 @@ public class Win32Program : IProgram
         return true;
     }
 
-    public List<CommandContextItem> GetCommands()
+    public List<IContextItem> GetCommands()
     {
-        List<CommandContextItem> commands = new List<CommandContextItem>();
+        List<IContextItem> commands = [];
 
         if (AppType != ApplicationType.InternetShortcutApplication && AppType != ApplicationType.Folder && AppType != ApplicationType.GenericFile)
         {
             commands.Add(new CommandContextItem(
-                    new RunAsAdminCommand(!string.IsNullOrEmpty(LnkFilePath) ? LnkFilePath : FullPath, ParentDirectory, false)));
+                    new RunAsAdminCommand(!string.IsNullOrEmpty(LnkFilePath) ? LnkFilePath : FullPath, ParentDirectory, false))
+            {
+                RequestedShortcut = KeyChords.RunAsAdministrator,
+            });
 
             commands.Add(new CommandContextItem(
-                    new RunAsUserCommand(!string.IsNullOrEmpty(LnkFilePath) ? LnkFilePath : FullPath, ParentDirectory)));
+                    new RunAsUserCommand(!string.IsNullOrEmpty(LnkFilePath) ? LnkFilePath : FullPath, ParentDirectory))
+            {
+                RequestedShortcut = KeyChords.RunAsDifferentUser,
+            });
         }
 
         commands.Add(new CommandContextItem(
-                    new CopyPathCommand(FullPath)));
+                    new CopyTextCommand(FullPath) { Name = Resources.copy_path })
+        {
+            RequestedShortcut = KeyChords.CopyFilePath,
+        });
 
         commands.Add(new CommandContextItem(
-                    new OpenPathCommand(ParentDirectory)));
+                    new OpenPathCommand(ParentDirectory))
+        {
+            RequestedShortcut = KeyChords.OpenFileLocation,
+        });
 
         commands.Add(new CommandContextItem(
-                    new OpenInConsoleCommand(ParentDirectory)));
+                    new OpenInConsoleCommand(ParentDirectory))
+        {
+            RequestedShortcut = KeyChords.OpenInConsole,
+        });
+
+        if (AppType == ApplicationType.ShortcutApplication || AppType == ApplicationType.ApprefApplication || AppType == ApplicationType.Win32Application)
+        {
+            commands.Add(new CommandContextItem(
+                new UninstallApplicationConfirmation(this))
+            {
+                RequestedShortcut = KeyChordHelpers.FromModifiers(ctrl: true, shift: true, vkey: VirtualKey.Delete),
+                IsCritical = true,
+            });
+        }
 
         return commands;
     }
@@ -213,6 +235,12 @@ public class Win32Program : IProgram
     public override string ToString()
     {
         return ExecutableName;
+    }
+
+    public string GetAppIdentifier()
+    {
+        // Use a combination of name and path to create a unique identifier
+        return $"{Name}|{FullPath}";
     }
 
     private static Win32Program CreateWin32Program(string path)
@@ -649,7 +677,7 @@ public class Win32Program : IProgram
         var paths = new List<string>();
         using (var root = Registry.LocalMachine.OpenSubKey(appPaths))
         {
-            if (root != null)
+            if (root is not null)
             {
                 paths.AddRange(GetPathsFromRegistry(root));
             }
@@ -657,7 +685,7 @@ public class Win32Program : IProgram
 
         using (var root = Registry.CurrentUser.OpenSubKey(appPaths))
         {
-            if (root != null)
+            if (root is not null)
             {
                 paths.AddRange(GetPathsFromRegistry(root));
             }
@@ -682,7 +710,7 @@ public class Win32Program : IProgram
         {
             using (var key = root.OpenSubKey(subkey))
             {
-                if (key == null)
+                if (key is null)
                 {
                     return string.Empty;
                 }
@@ -724,13 +752,13 @@ public class Win32Program : IProgram
 
         public bool Equals(Win32Program? app1, Win32Program? app2)
         {
-            if (app1 == null && app2 == null)
+            if (app1 is null && app2 is null)
             {
                 return true;
             }
 
-            return app1 != null
-                    && app2 != null
+            return app1 is not null
+                    && app2 is not null
                     && (app1.Name?.ToUpperInvariant(), app1.ExecutableName?.ToUpperInvariant(), app1.FullPath?.ToUpperInvariant())
                     .Equals((app2.Name?.ToUpperInvariant(), app2.ExecutableName?.ToUpperInvariant(), app2.FullPath?.ToUpperInvariant()));
         }
@@ -827,7 +855,7 @@ public class Win32Program : IProgram
             var paths = new HashSet<string>(defaultHashsetSize);
             var runCommandPaths = new HashSet<string>(defaultHashsetSize);
 
-            // Parallelize multiple sources, and priority based on paths which most likely contain .lnks which are formatted
+            // Parallelize multiple sources, and priority based on paths which most likely contain .lnk files which are formatted
             var sources = new (bool IsEnabled, Func<IEnumerable<string>> GetPaths)[]
             {
                 (true, () => CustomProgramPaths(settings.ProgramSources, settings.ProgramSuffixes)),
@@ -890,7 +918,7 @@ public class Win32Program : IProgram
             Parallel.ForEach(paths, source =>
             {
                 var program = GetProgramFromPath(source);
-                if (program != null)
+                if (program is not null)
                 {
                     programsList.Add(program);
                 }
@@ -900,7 +928,7 @@ public class Win32Program : IProgram
             Parallel.ForEach(runCommandPaths, source =>
             {
                 var program = GetRunCommandProgramFromPath(source);
-                if (program != null)
+                if (program is not null)
                 {
                     runCommandProgramsList.Add(program);
                 }
@@ -916,5 +944,30 @@ public class Win32Program : IProgram
             Logger.LogError(e.Message);
             return Array.Empty<Win32Program>();
         }
+    }
+
+    internal AppItem ToAppItem()
+    {
+        var app = this;
+        var icoPath = string.IsNullOrEmpty(app.IcoPath) ?
+            (app.AppType == Win32Program.ApplicationType.InternetShortcutApplication ?
+                app.IcoPath :
+                app.FullPath) :
+            app.IcoPath;
+
+        icoPath = icoPath.EndsWith(".lnk", System.StringComparison.InvariantCultureIgnoreCase) ?
+            app.FullPath :
+            icoPath;
+        return new AppItem()
+        {
+            Name = app.Name,
+            Subtitle = app.Description,
+            Type = app.Type(),
+            IcoPath = icoPath,
+            ExePath = !string.IsNullOrEmpty(app.LnkFilePath) ? app.LnkFilePath : app.FullPath,
+            DirPath = app.Location,
+            Commands = app.GetCommands(),
+            AppIdentifier = app.GetAppIdentifier(),
+        };
     }
 }
